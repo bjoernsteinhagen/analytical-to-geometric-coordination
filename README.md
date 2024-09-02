@@ -1,100 +1,72 @@
-# Speckle Automate function template - Python
+# Speckle Automate Function: ETABS Analytical Surfaces to Revit Walls Coordination
+## 🌐 Overview
+This analytical-to-geometric-coordination function in Speckle Automate is a specialized tool designed for structural engineers and architects to ensure accurate coordination between analytical models and architectural designs. It bridges the gap between ETABS finite element analysis models and architectural Revit models, enabling rapid assessment of coordination between 2d planar analytical surfaces in ETABS and the volumetric walls in the Revit architectural model.
 
-This template repository is for a Speckle Automate function written in Python
-using the [specklepy](https://pypi.org/project/specklepy/) SDK to interact with Speckle data.
+## ⚠️ Disclaimer: Conceptual Demonstration Only
+**IMPORTANT:** This function is a conceptual demonstration and is not intended for production use. It illustrates how Speckle Automate can facilitate the alignment of structural and architectural models, reducing the risk of miscommunication and errors in structural behavior and design.
 
-This template contains the full scaffolding required to publish a function to the Automate environment.
-It also has some sane defaults for development environment setups.
+## 🔍 Functionality
+Coordination between analytical and architectural models is crucial for accurate structural analysis and design in construction and engineering. Misalignment between these models can lead to incorrect results and communication issues. This function demonstrates Speckle's ability to integrate and coordinate data from different models, ensuring that analytical surfaces and architectural walls are aligned.
 
-## Getting started
+## ⚙️ How It Works
 
-1. Use this template repository to create a new repository in your own / organization's profile.
+The function to check the coordination between ETABS analytical surfaces and Revit architectural walls involves several key components and steps:
 
-Register the function 
+1. **Creating a Buffered Mesh**:
+   - **Function**: `MeshBufferer.create_buffered_mesh`
+   - **Overview**: The function creates a buffered version of each architectural wall mesh to account for slight mismatches and ensure robust matching. This is achieved by moving each vertex along its normal by a specified `buffer_distance`. The buffered mesh then checks if the analytical surfaces fall within this expanded volume.
 
-### Add new dependencies
+     ```python
+     buffered_mesh = MeshBufferer.create_buffered_mesh(wall.mesh, self.buffer_distance)
+     ```
 
-To add new Python package dependencies to the project, use the following:
-`$ poetry add pandas`
+   - **Mathematical Detail**: The new vertex positions are calculated as `new_vertex = vertex + buffer_distance * normal`, where `normal` is the vertex normal vector.
 
-### Change launch variables
+2. **Generating Interior Points**:
+   - **Function**: `InteriorPointGenerator.generate_interior_points`
+   - **Overview**: A grid of interior points is generated for a given analytical surface. This grid spans the bounds of the surface and helps verify if the surface is completely within the buffered wall mesh.
 
-Describe how the launch.json should be edited.
+     ```python
+     interior_points = InteriorPointGenerator.generate_interior_points(surface)
+     ```
 
-### Github Codespaces
+   - **Mathematical Detail**: The function creates a 3D grid of points within the bounding box of the surface using `np.meshgrid` to generate combinations of `x`, `y`, and `z` coordinates.
 
-Create a new repo from this template, and use the create new code.
+3. **Checking Surface-Wall Match**:
+   - **Function**: `SurfaceWallMatcher.check_surface_wall_match`
+   - **Overview**: This function performs a detailed check to determine if the analytical surface matches with a given architectural wall. It first verifies if all vertices of the surface are contained within the buffered wall mesh. It then checks if all generated interior points of the surface are also inside the buffered wall mesh.
 
-### Using this Speckle Function
+     ```python
+     vertices_inside = all(buffered_mesh.contains([point]) for point in surface.points)
+     all_interior_points_inside = all(buffered_mesh.contains(interior_points))
+     ```
 
-1. [Create](https://automate.speckle.dev/) a new Speckle Automation.
-1. Select your Speckle Project and Speckle Model.
-1. Select the deployed Speckle Function.
-1. Enter a phrase to use in the comment.
-1. Click `Create Automation`.
+   - **Mathematical Detail**: The containment check verifies if each point `p` of the surface lies inside the buffered mesh volume. This involves a point-in-mesh test, which is typically a geometric inclusion test.
 
-## Getting Started with Creating Your Own Speckle Function
+4. **Finding Matching Partners**:
+   - **Function**: `SurfaceWallMatcher.find_matching_partners`
+   - **Overview**: This function iterates through all analytical surfaces and architectural walls, checking for matches. It uses bounding box overlap as a preliminary filter (considering the buffer distance) before performing detailed matching checks. It returns a dictionary mapping surface IDs to wall IDs if a match is found or "none" if no match is found.
 
-1. [Register](https://automate.speckle.dev/) your Function with [Speckle Automate](https://automate.speckle.dev/) and select the Python template.
-1. A new repository will be created in your GitHub account.
-1. Make changes to your Function in `main.py`. See below for the Developer Requirements and instructions on how to test.
-1. To create a new version of your Function, create a new [GitHub release](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) in your repository.
+     ```python
+     if np.all(surface.bounds[0] - self.buffer_distance <= wall.bounds[1] + self.buffer_distance) and \
+        np.all(surface.bounds[1] + self.buffer_distance >= wall.bounds[0] - self.buffer_distance):
+         if self.check_surface_wall_match(surface, wall):
+             matches[surface.id] = wall.id
+             match_found = True
+             break
+     ```
 
-## Developer Requirements
+   - **Mathematical Detail**: The bounding box overlap is verified by checking if the surface's expanded bounding box intersects with the wall mesh's expanded bounding box, using the buffer distance to account for minor inaccuracies.
 
-1. Install the following:
-    - [Python 3](https://www.python.org/downloads/)
-    - [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
-1. Run `poetry shell && poetry install` to install the required Python packages.
+By following these steps, the function enables structural engineers to effectively coordinate analytical surfaces from ETABS models with architectural walls from Revit models, ensuring alignment and accuracy in the structural design process.
 
-## Building and Testing
+## 🛠️ Potential Use Cases
+* **Structural-Architectural Coordination:** Ensures that analytical models align correctly with architectural designs, preventing structural miscalculations.
+* **Design Validation:** Allows engineers to verify that the analytical model accurately reflects the architectural intent, reducing the risk of design errors.
+* **Communication Improvement:** Enhances communication between structural engineers and architects by clearly validating model alignment.
 
-The code can be tested locally by running `poetry run pytest`.
+## 🚀 Getting Started and Contributing
+Refer to our Docs: https://speckle.guide/automate/
 
-### Building and running the Docker Container Image
-
-Running and testing your code on your machine is a great way to develop your Function; the following instructions are a bit more in-depth and only required if you are having issues with your Function in GitHub Actions or on Speckle Automate.
-
-#### Building the Docker Container Image
-
-The GitHub Action packages your code into the format required by Speckle Automate. This is done by building a Docker Image, which Speckle Automate runs. You can attempt to build the Docker Image locally to test the building process.
-
-To build the Docker Container Image, you must have [Docker](https://docs.docker.com/get-docker/) installed.
-
-Once you have Docker running on your local machine:
-
-1. Open a terminal
-1. Navigate to the directory in which you cloned this repository
-1. Run the following command:
-
-    ```bash
-    docker build -f ./Dockerfile -t speckle_automate_python_example .
-    ```
-
-#### Running the Docker Container Image
-
-Once the GitHub Action has built the image, it is sent to Speckle Automate. When Speckle Automate runs your Function as part of an Automation, it will run the Docker Container Image. You can test that your Docker Container Image runs correctly locally.
-
-1. To then run the Docker Container Image, run the following command:
-
-    ```bash
-    docker run --rm speckle_automate_python_example \
-    python -u main.py run \
-    '{"projectId": "1234", "modelId": "1234", "branchName": "myBranch", "versionId": "1234", "speckleServerUrl": "https://speckle.xyz", "automationId": "1234", "automationRevisionId": "1234", "automationRunId": "1234", "functionId": "1234", "functionName": "my function", "functionLogo": "base64EncodedPng"}' \
-    '{}' \
-    yourSpeckleServerAuthenticationToken
-    ```
-
-Let's explain this in more detail:
-
-`docker run—-rm speckle_automate_python_example` tells Docker to run the Docker Container Image we built earlier. `speckle_automate_python_example` is the name of the Docker Container Image. The `--rm` flag tells Docker to remove the container after it has finished running, freeing up space on your machine.
-
-The line `python -u main.py run` is the command run inside the Docker Container Image. The rest of the command is the arguments passed to the command. The arguments are:
-
-- `'{"projectId": "1234", "modelId": "1234", "branchName": "myBranch", "versionId": "1234", "speckleServerUrl": "https://speckle.xyz", "automationId": "1234", "automationRevisionId": "1234", "automationRunId": "1234", "functionId": "1234", "functionName": "my function", "functionLogo": "base64EncodedPng"}'` - the metadata that describes the automation and the function.
-- `{}` - the input parameters for the function the Automation creator can set. Here, they are blank, but you can add your parameters to test your function.
-- `yourSpeckleServerAuthenticationToken`—the authentication token for the Speckle Server that the Automation can connect to. This is required to interact with the Speckle Server, for example, to get data from the Model.
-
-## Resources
-
-- [Learn](https://speckle.guide/dev/python.html) more about SpecklePy and interacting with Speckle from Python.
+## 📧 Contact
+For more information or to provide feedback, please refer to our [Community Forum](https://speckle.community/).

@@ -1,5 +1,4 @@
 import numpy as np
-import concurrent.futures
 import trimesh
 
 class MeshBufferer:
@@ -58,26 +57,20 @@ class SurfaceWallMatcher:
     def find_matching_partners(self, analytical_surfaces, architectural_walls) -> dict:
         """Find matching partners between analytical surfaces and architectural walls."""
         matches = {}
-
-        # Helper function for parallel processing
-        def process_surface(surface):
-            surface_bounds = surface.bounds
+        
+        for surface in analytical_surfaces:
             match_found = False
-
             for wall in architectural_walls:
-                if np.all(surface_bounds[0] - self.buffer_distance <= wall.bounds[1] + self.buffer_distance) and \
-                   np.all(surface_bounds[1] + self.buffer_distance >= wall.bounds[0] - self.buffer_distance):
+                # First, check if the bounding boxes overlap (with buffer)
+                if np.all(surface.bounds[0] - self.buffer_distance <= wall.bounds[1] + self.buffer_distance) and \
+                np.all(surface.bounds[1] + self.buffer_distance >= wall.bounds[0] - self.buffer_distance):
+                    # If bounding boxes overlap, perform detailed check
                     if self.check_surface_wall_match(surface, wall):
                         matches[surface.id] = wall.id
                         match_found = True
-                        break
-
+                        break  # Stop checking other walls once a match is found
+            
             if not match_found:
-                matches[surface.id] = "none"
-
-        # Use ThreadPoolExecutor for parallel processing
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(process_surface, surface) for surface in analytical_surfaces]
-            concurrent.futures.wait(futures)
-
+                matches[surface.id] = "none"  # Use "none" to indicate no match was found
+        
         return matches

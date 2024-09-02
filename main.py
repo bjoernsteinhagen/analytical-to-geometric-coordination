@@ -83,7 +83,22 @@ def automate_function(
     matcher = SurfaceWallMatcher(buffer_distance=function_inputs.buffer_size)
     matches = matcher.find_matching_partners(analytical_surfaces, architectural_walls)
 
-    print(matches)
+    # Report
+    none_ids = [surface_id for surface_id, wall_id in matches.items() if wall_id == "none"]
+    none_count = len(none_ids)
+    if none_count > 0:
+        automate_context.attach_error_to_objects(
+            category="Uncoordinated analytical surfaces",
+            object_ids=none_ids,
+            message="These surfaces have either extents outside of the scope of the buffered mesh or cannot be associated with a wall object entirely.")
+        automate_context.mark_run_failed(
+            "Automation failed: "
+            f"Found {none_count} uncoordinated analytical surfaces in the ETABS model"
+        )
+        automate_context.set_context_view()
+
+    else:
+        automate_context.mark_run_success("ETABS model fully coordinated with Revit model.")
 
 # make sure to call the function with the executor
 if __name__ == "__main__":

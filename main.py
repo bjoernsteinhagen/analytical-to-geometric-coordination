@@ -9,23 +9,14 @@ from speckle_automate import (
     AutomationContext,
     execute_automate_function,
 )
-from specklepy.objects.units import Units
 from models.etabs_model import EtabsModelProcessor
 from models.revit_model import RevitModelProcessor
 from computations.surface_wall_matcher import SurfaceWallMatcher
 
-class BufferUnit(Enum):
-    Metre = Units.m
-    Centimetre = Units.cm
-    Millimetre = Units.mm
-
-
-def create_one_of_enum(enum_cls):
-    """
-    Helper function to create a JSON schema from an Enum class.
-    This is used for generating user input forms in the UI.
-    """
-    return [{"const": item.value, "title": item.name} for item in enum_cls]
+class Units(Enum):
+    Metre = "m"
+    Centimetre = "cm"
+    Millimetre = "mm"
 
 class FunctionInputs(AutomateBase):
     """Author-defined function values.
@@ -43,15 +34,11 @@ class FunctionInputs(AutomateBase):
             The vertices of the 3D mesh of the wall(s) are translated along the normals of each face with this value.",
     )
 
-    buffer_unit: BufferUnit = Field(
-        default=BufferUnit.Metre,
+    buffer_unit: Units = Field(
+        default=Units.Metre,
         title="Buffer Unit",
         description="Unit of the buffer size value.",
-        json_schema_extra={
-            "oneOf": create_one_of_enum(BufferUnit),
-        },
     )
-
 
 def automate_function(
     automate_context: AutomationContext,

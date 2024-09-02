@@ -28,8 +28,6 @@ class FunctionInputs(AutomateBase):
         title="Buffer size for the Revit walls (tolerance)",
         description="Specify the size of the buffered mesh. \
             The vertices of the 3D mesh of the wall(s) are translated along the normals of each face with this value.",
-            json_schema_extra={"readOnly" : True,
-                               },
     )
 
     buffer_unit: str = Field(

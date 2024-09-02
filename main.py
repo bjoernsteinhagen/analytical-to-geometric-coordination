@@ -36,7 +36,6 @@ class FunctionInputs(AutomateBase):
         description="Unit of the buffer size value.",
         json_schema_extra={
             "examples": ["mm", "cm", "m"],
-            "readOnly" : True
         },
     )
 

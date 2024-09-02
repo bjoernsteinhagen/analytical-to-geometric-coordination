@@ -2,6 +2,7 @@
 
 Use the automation_context module to wrap your function in an Automate context helper.
 """
+from enum import Enum
 from pydantic import Field
 from speckle_automate import (
     AutomateBase,
@@ -13,6 +14,18 @@ from models.etabs_model import EtabsModelProcessor
 from models.revit_model import RevitModelProcessor
 from computations.surface_wall_matcher import SurfaceWallMatcher
 
+class BufferUnit(Enum):
+    Metre = Units.m
+    Centimetre = Units.cm
+    Millimetre = Units.mm
+
+
+def create_one_of_enum(enum_cls):
+    """
+    Helper function to create a JSON schema from an Enum class.
+    This is used for generating user input forms in the UI.
+    """
+    return [{"const": item.value, "title": item.name} for item in enum_cls]
 
 class FunctionInputs(AutomateBase):
     """Author-defined function values.
@@ -25,17 +38,17 @@ class FunctionInputs(AutomateBase):
 
     buffer_size: float = Field(
         default=0.01,
-        title="Buffer size for the Revit walls (tolerance)",
+        title="Buffer Size",
         description="Specify the size of the buffered mesh. \
             The vertices of the 3D mesh of the wall(s) are translated along the normals of each face with this value.",
     )
 
-    buffer_unit: str = Field(
-        default=Units.m,
+    buffer_unit: BufferUnit = Field(
+        default=BufferUnit.Metre,
         title="Buffer Unit",
         description="Unit of the buffer size value.",
         json_schema_extra={
-            "examples": ["mm", "cm", "m"],
+            "oneOf": create_one_of_enum(BufferUnit),
         },
     )
 

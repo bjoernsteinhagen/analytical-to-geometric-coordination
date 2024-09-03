@@ -14,7 +14,6 @@ class RevitWall:
         self.id = wall_id
         self.bounds = mesh.bounds
 
-
 class RevitModelProcessor:
     """Responsible for processing the Revit model and extracting architectural walls."""
     def __init__(self, revit_model: Base):
@@ -51,7 +50,7 @@ class RevitModelProcessor:
 
         if not architectural_walls:
             raise ValueError("No architectural walls found in the provided Revit model.")
-
+        
         return architectural_walls
 
     def _is_valid_wall(self, wall) -> bool:
@@ -85,3 +84,18 @@ class RevitModelProcessor:
         )
 
         return latest_reference_model_version
+
+def export_walls_to_obj(architectural_walls, file_path):
+    """Combine all wall meshes and export them to a single .obj file."""
+    # List to store all the individual meshes
+    meshes = []
+
+    # Iterate through the walls and collect their meshes
+    for wall in architectural_walls:
+        meshes.append(wall.mesh)
+
+    # Combine all meshes into a single mesh
+    combined_mesh = trimesh.util.concatenate(meshes)
+
+    # Export the combined mesh to an .obj file
+    combined_mesh.export(file_path, file_type='obj')

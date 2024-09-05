@@ -14,14 +14,31 @@ class RevitWall:
         self.id = wall_id
         self.buffered_mesh = self.create_buffered_mesh(buffer_distance)
 
-    def create_buffered_mesh(self, buffer_distance) -> trimesh.Trimesh:
+    def create_buffered_mesh(self, buffer_distance: float) -> trimesh.Trimesh:
         """Create a slightly larger mesh by moving each vertex along its normal."""
+        # Ensure normals are calculated
+        if self.mesh.vertex_normals.size == 0:
+            self.mesh.compute_vertex_normals()
+        
+        # Create a copy of the vertices and normals
         vertices = self.mesh.vertices.copy()
         vertex_normals = self.mesh.vertex_normals.copy()
 
-        buffered_vertices = vertices + buffer_distance * vertex_normals
+        # Normalize the normals
+        norms = np.linalg.norm(vertex_normals, axis=1, keepdims=True)
+        normalized_normals = vertex_normals / np.maximum(norms, 1e-10)  # Avoid division by zero
 
-        return trimesh.Trimesh(vertices=buffered_vertices, faces=self.mesh.faces)
+        # Displace the vertices along the normal by the buffer_distance
+        buffered_vertices = vertices + buffer_distance * normalized_normals
+
+        # Create a new mesh with the buffered vertices
+        buffered_mesh = trimesh.Trimesh(vertices=buffered_vertices, faces=self.mesh.faces, process=False)
+
+        # Optionally, check for watertightness and repair if necessary
+        if not buffered_mesh.is_watertight:
+            buffered_mesh = buffered_mesh.repair()
+
+        return buffered_mesh
         
 
 class RevitModelProcessor:
@@ -108,4 +125,4 @@ def export_walls_to_obj(architectural_walls, file_path):
     combined_mesh = trimesh.util.concatenate(meshes)
 
     # Export the combined mesh to an .obj file
-    combined_mesh.export(file_path, file_type='obj')
+    combined_mesh.export(file_path, file_type='.obj')

@@ -25,7 +25,7 @@ def test_function_run(test_automation_run_data: AutomationRunData, test_automati
         automate_function,
         FunctionInputs(
             revit_model_name='arc/revit',
-            buffer_size=0.1,
+            buffer_size=0.02,
             buffer_unit='m'),
     )
 

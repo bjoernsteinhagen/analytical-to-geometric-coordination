@@ -20,7 +20,7 @@ class SurfaceWallMatcher:
 
         for wall in walls:
             wall_min_z, wall_max_z = wall.buffered_mesh.bounds[0][2], wall.buffered_mesh.bounds[1][2]
-            
+
             # Check if the wall is within the z range of the surface
             if not (surface_max_z < wall_min_z or surface_min_z > wall_max_z):
                 filtered_walls.append(wall)
@@ -44,27 +44,28 @@ class SurfaceWallMatcher:
         # Combine vertices and interior points for the check
         surface.generate_interior_points()
         all_points = np.vstack((surface.points, surface.interior_points))
+        remaining_points = all_points.copy()
 
         for wall in candidate_walls:
-            # Check if all points are within this wall's mesh
-            points_contained = wall.buffered_mesh.contains(all_points)
+            # Check if points are within this wall's mesh
+            points_contained = wall.buffered_mesh.contains(remaining_points)
 
             if points_contained.all():
-                # If all points are within this wall's mesh, add wall id to matches and break
                 matching_wall_ids.append(wall.id)
-                break
-            else:
-                # If not all points are within this wall's mesh, filter out points that are contained
-                remaining_points = all_points[~points_contained]
+                return matching_wall_ids
 
-                if remaining_points.size == 0:
-                    # If no remaining points, all points were contained
-                    matching_wall_ids.append(wall.id)
-                    break  # All points are accounted for, so we can stop searching
+            if points_contained.any():
+                new_remaining_points = remaining_points[~points_contained]       
+                remaining_points = new_remaining_points
+                matching_wall_ids.append(wall.id)
 
-                # If some points are contained, remember this wall and continue
-                if remaining_points.size < all_points.shape[0]:
-                    matching_wall_ids.append(wall.id)
+            if remaining_points.size == 0:
+                return matching_wall_ids
+
+        # If there are still remaining points after checking all walls, reset matching_wall_ids
+        if new_remaining_points.shape[0] > 0:
+            matching_wall_ids = []
+            return matching_wall_ids
 
         return matching_wall_ids
 
@@ -86,12 +87,11 @@ class SurfaceWallMatcher:
         for surface in surfaces:
             # Step 1: Filter the candidate walls based on spatial proximity
             candidate_walls = SurfaceWallMatcher.spatial_proximity_filter(surface, walls)
-            
+
             # Step 2: Check if the surface is coordinated with any candidate walls
             matching_wall_ids = SurfaceWallMatcher.is_surface_coordinated(surface, candidate_walls)
 
-            # Step 3: If there are matching walls, store them in the matches dictionary
-            if matching_wall_ids:
-                matches[surface.id] = matching_wall_ids
+            # Step 3: Store them in the matches dictionary
+            matches[surface.id] = matching_wall_ids
 
         return matches

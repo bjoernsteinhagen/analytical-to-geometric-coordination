@@ -11,7 +11,7 @@ class AnalyticalSurface:
         self.bounds = np.array([np.min(points, axis=0), np.max(points, axis=0)])
         self.interior_points = None
 
-    def generate_interior_points(self, num_points=4):
+    def generate_interior_points(self, num_points=6):
         """
         Generate a series of interior points on the surface for additional checks.
         

@@ -9,17 +9,27 @@ from specklepy.core.api import operations
 
 class RevitWall:
     """Encapsulates the wall data, including the mesh and its bounds, ensuring the data is clean and ready for further processing."""
-    def __init__(self, mesh: trimesh.Trimesh, wall_id: str):
+    def __init__(self, mesh: trimesh.Trimesh, wall_id: str, buffer_distance: float):
         self.mesh = mesh  # trimesh.Trimesh object
         self.id = wall_id
-        self.bounds = mesh.bounds
+        self.buffered_mesh = self.create_buffered_mesh(buffer_distance)
+
+    def create_buffered_mesh(self, buffer_distance) -> trimesh.Trimesh:
+        """Create a slightly larger mesh by moving each vertex along its normal."""
+        vertices = self.mesh.vertices.copy()
+        vertex_normals = self.mesh.vertex_normals.copy()
+
+        buffered_vertices = vertices + buffer_distance * vertex_normals
+
+        return trimesh.Trimesh(vertices=buffered_vertices, faces=self.mesh.faces)
+        
 
 class RevitModelProcessor:
     """Responsible for processing the Revit model and extracting architectural walls."""
     def __init__(self, revit_model: Base):
         self.revit_model = revit_model
 
-    def get_architectural_walls(self) -> List[RevitWall]:
+    def get_architectural_walls(self, buffer_distance) -> List[RevitWall]:
         """Extracts architectural walls from the Revit model.
 
         Returns:
@@ -46,7 +56,7 @@ class RevitModelProcessor:
                     mesh = trimesh.Trimesh(vertices=vertices, faces=faces_indices)
 
                     # Create RevitWall instance
-                    architectural_walls.append(RevitWall(mesh, wall.id))
+                    architectural_walls.append(RevitWall(mesh, wall.id, buffer_distance))
 
         if not architectural_walls:
             raise ValueError("No architectural walls found in the provided Revit model.")

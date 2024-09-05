@@ -29,4 +29,4 @@ def test_function_run(test_automation_run_data: AutomationRunData, test_automati
             buffer_unit='m'),
     )
 
-    assert automate_sdk.run_status == AutomationStatus.FAILED
+    assert automate_sdk.run_status == AutomationStatus.SUCCEEDED

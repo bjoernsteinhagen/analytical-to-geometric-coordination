@@ -11,7 +11,7 @@ from speckle_automate import (
 )
 from models.etabs_model import EtabsModelProcessor
 from models.revit_model import RevitModelProcessor
-from computations.surface_wall_matcher import SurfaceWallMatcher
+from computations.surface_to_wall_matcher import SurfaceWallMatcher
 
 class Units(Enum):
     Metre = "m"
@@ -64,28 +64,55 @@ def automate_function(
         function_inputs.revit_model_name
     )
     revit_processor = RevitModelProcessor(revit_model)
-    architectural_walls = revit_processor.get_architectural_walls()
+    architectural_walls = revit_processor.get_architectural_walls(function_inputs.buffer_size)
 
     # Find matching partners
-    matcher = SurfaceWallMatcher(buffer_distance=function_inputs.buffer_size)
-    matches = matcher.find_matching_partners(analytical_surfaces, architectural_walls)
+    matches = SurfaceWallMatcher.find_matching_partners(analytical_surfaces, architectural_walls)
 
     # Report
-    none_ids = [surface_id for surface_id, wall_id in matches.items() if wall_id == "none"]
+    number_of_surfaces = len(analytical_surfaces)
+    none_ids = [surface_id for surface_id, wall_ids in matches.items() if not wall_ids]
     none_count = len(none_ids)
+    
+    # Calculate statistics
+    easy_match = 0
+    tricky_matches = 0
+    hazardous_matches = 0
+    
+    for wall_ids in matches.values():
+        if not wall_ids:  # Skip if no walls matched
+            continue
+        
+        num_matches = len(wall_ids)
+        if num_matches == 1:
+            easy_match += 1
+        elif 2 <= num_matches <= 3:
+            tricky_matches += 1
+        elif num_matches > 3:
+            hazardous_matches += 1
+
     if none_count > 0:
         automate_context.attach_error_to_objects(
             category="Uncoordinated analytical surfaces",
             object_ids=none_ids,
             message="These surfaces have either extents outside of the scope of the buffered mesh or cannot be associated with a wall object entirely.")
         automate_context.mark_run_failed(
-            "Automation failed: "
-            f"Found {none_count} uncoordinated analytical surfaces in the ETABS model"
+            "ETABS model not fully coordinated with Revit model:"
+                f'\n\tNone Count: {none_count} / {number_of_surfaces}. '
+                f'\n\tEasy Matches: {easy_match} / {number_of_surfaces}. '
+                f'\n\tTricky Matches: {tricky_matches} / {number_of_surfaces}. '
+                f'\n\tHazardous Matches: {hazardous_matches} / {number_of_surfaces}. '
         )
         automate_context.set_context_view()
 
     else:
-        automate_context.mark_run_success("ETABS model fully coordinated with Revit model.")
+        automate_context.mark_run_success(
+            "ETABS model fully coordinated with Revit model."
+                f'\n\tNone Count: {none_count} / {number_of_surfaces}. '
+                f'\n\tEasy Matches: {easy_match} / {number_of_surfaces}. '
+                f'\n\tTricky Matches: {tricky_matches} / {number_of_surfaces}. '
+                f'\n\tHazardous Matches: {hazardous_matches} / {number_of_surfaces}.'
+        )
 
 # make sure to call the function with the executor
 if __name__ == "__main__":

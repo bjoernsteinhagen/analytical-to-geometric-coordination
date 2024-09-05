@@ -9,6 +9,24 @@ class AnalyticalSurface:
         self.points = np.array(points)
         self.id = surface_id
         self.bounds = np.array([np.min(points, axis=0), np.max(points, axis=0)])
+        self.interior_points = None
+
+    def generate_interior_points(self, num_points=4):
+        """
+        Generate a series of interior points on the surface for additional checks.
+        
+        Args:
+            num_points (int): Number of interior points to generate.
+
+        Returns:
+            np.ndarray: Array of interior points inside the surface.
+        """
+        # Compute the centroid of the surface
+        centroid = np.mean(self.points, axis=0)
+
+        # Use centroid as a base and perturb it slightly to create interior points
+        interior_points = [centroid + (np.random.rand(3) - 0.5) * 0.01 for _ in range(num_points)]
+        self.interior_points = interior_points
 
 
 class EtabsModelProcessor:

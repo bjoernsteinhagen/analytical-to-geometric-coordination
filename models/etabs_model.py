@@ -11,22 +11,60 @@ class AnalyticalSurface:
         self.bounds = np.array([np.min(points, axis=0), np.max(points, axis=0)])
         self.interior_points = None
 
-    def generate_interior_points(self, num_points=6):
+    def generate_interior_points(self, num_points=10):
         """
-        Generate a series of interior points on the surface for additional checks.
-        
+        Generate uniformly distributed interior points on a planar surface defined by four vertices.
+
         Args:
             num_points (int): Number of interior points to generate.
 
         Returns:
-            np.ndarray: Array of interior points inside the surface.
+            np.ndarray: Array of interior points on the surface.
         """
-        # Compute the centroid of the surface
-        centroid = np.mean(self.points, axis=0)
+        # Split the quadrilateral into two triangles
+        if len(self.points) != 4:
+            raise ValueError("Expecting 2D planar surfaces defined by four vertices.")
+        v0, v1, v2, v3 = self.points
+        triangle1 = [v0, v1, v2]
+        triangle2 = [v0, v2, v3]
 
-        # Use centroid as a base and perturb it slightly to create interior points
-        interior_points = [centroid + (np.random.rand(3) - 0.5) * 0.01 for _ in range(num_points)]
-        self.interior_points = interior_points
+        # Generate points for each triangle
+        points1 = self._generate_points_in_triangle(triangle1, num_points // 2)
+        points2 = self._generate_points_in_triangle(triangle2, num_points // 2)
+
+        # Combine points from both triangles
+        self.interior_points = np.vstack((points1, points2))
+
+        if self.id == 'a1509c1910abec0f97d1746f86803428':
+            export_surface_to_txt(self, 'test_print.txt')
+
+    def _generate_points_in_triangle(self, vertices, num_points):
+        """
+        Generate uniformly distributed points inside a triangle.
+
+        Args:
+            vertices (list): List of three vertices defining the triangle.
+            num_points (int): Number of points to generate.
+
+        Returns:
+            np.ndarray: Array of points inside the triangle.
+        """
+        v0, v1, v2 = vertices
+        points = []
+
+        for _ in range(num_points):
+            # Generate random barycentric coordinates
+            r1 = np.random.rand()
+            r2 = np.random.rand()
+            if r1 + r2 > 1:
+                r1 = 1 - r1
+                r2 = 1 - r2
+
+            # Calculate the point using barycentric coordinates
+            point = v0 + r1 * (v1 - v0) + r2 * (v2 - v0)
+            points.append(point)
+
+        return np.array(points)
 
 
 class EtabsModelProcessor:
@@ -100,10 +138,10 @@ class EtabsModelProcessor:
             return self.extract_analytical_surfaces()
         raise ValueError("Invalid ETABS model source.")
 
-def export_surfaces_to_txt(surfaces, file_path):
-    """Export points from multiple surfaces to a text file for importing into Rhino."""
+def export_surface_to_txt(surface, file_path):
+    """Export points from a surface to a text file for importing into Rhino."""
     with open(file_path, 'w') as f:
-        for i, surface in enumerate(surfaces):
-            f.write(f"# Surface {i+1}\n")
-            np.savetxt(f, surface.points, delimiter=',', header="x,y,z", comments='')
-            f.write("\n")  # Add a blank line between surfaces
+        f.write(f"# Surface {surface.id}\n")
+        np.savetxt(f, surface.points, delimiter=',', header="x,y,z", comments='')
+        np.savetxt(f, surface.interior_points, delimiter=',', header="x,y,z", comments='')
+        f.write("\n")

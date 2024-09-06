@@ -96,10 +96,10 @@ def automate_function(
             message="No match found. The surfaces are not coordinated with the architectural model.")
         automate_context.mark_run_failed(
             "ETABS model not fully coordinated with Revit model:"
-                f'\n\tNo matches: {results['empty_lists']['count']} / {len(matches)}. '
-                f'\n\tEasy matches: {results['lists_with_1_item']['count']} / {len(matches)}. '
-                f'\n\tMulti-wall matches (easy): {results['lists_between_2_and_3']['count']} / {len(matches)}. '
-                f'\n\tMulti-wall matches (hard): {results['lists_greater_than_3']['count']} / {len(matches)}. '
+                f"\n\tNo matches: {results['empty_lists']['count']} / {len(matches)}. "
+                f"\n\tEasy matches: {results['lists_with_1_item']['count']} / {len(matches)}. "
+                f"\n\tMulti-wall matches (easy): {results['lists_between_2_and_3']['count']} / {len(matches)}. "
+                f"\n\tMulti-wall matches (hard): {results['lists_greater_than_3']['count']} / {len(matches)}. "
         )
         automate_context.set_context_view()
 
@@ -121,10 +121,10 @@ def automate_function(
         )
         automate_context.mark_run_success(
             "ETABS model fully coordinated with Revit model."
-                f'\n\tNo matches: {results['empty_lists']['count']} / {len(matches)}. '
-                f'\n\tEasy matches: {results['lists_with_1_item']['count']} / {len(matches)}. '
-                f'\n\tMulti-wall matches (easy): {results['lists_between_2_and_3']['count']} / {len(matches)}. '
-                f'\n\tMulti-wall matches (hard): {results['lists_greater_than_3']['count']} / {len(matches)}. '
+                f"\n\tNo matches: {results['empty_lists']['count']} / {len(matches)}. "
+                f"\n\tEasy matches: {results['lists_with_1_item']['count']} / {len(matches)}. "
+                f"\n\tMulti-wall matches (easy): {results['lists_between_2_and_3']['count']} / {len(matches)}. "
+                f"\n\tMulti-wall matches (hard): {results['lists_greater_than_3']['count']} / {len(matches)}. "
         )
 
 if __name__ == "__main__":

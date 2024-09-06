@@ -58,6 +58,10 @@ class RevitModelProcessor:
         collections = self.revit_model.elements
         architectural_walls = []
 
+        # Check if any collection has the name 'Walls'
+        if not any(collection.name == 'Walls' for collection in collections):
+            raise ValueError("None of the collections have 'Walls' as a named attribute.")
+
         for collection in collections:
             if collection.name == 'Walls':
                 for wall in collection.elements:
@@ -111,18 +115,3 @@ class RevitModelProcessor:
         )
 
         return latest_reference_model_version
-
-def export_walls_to_obj(architectural_walls, file_path):
-    """Combine all wall meshes and export them to a single .obj file."""
-    # List to store all the individual meshes
-    meshes = []
-
-    # Iterate through the walls and collect their meshes
-    for wall in architectural_walls:
-        meshes.append(wall.mesh)
-
-    # Combine all meshes into a single mesh
-    combined_mesh = trimesh.util.concatenate(meshes)
-
-    # Export the combined mesh to an .obj file
-    combined_mesh.export(file_path, file_type='.obj')

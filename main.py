@@ -75,25 +75,25 @@ def automate_function(
     results = analyze_dict(matches)
 
     if results['empty_lists']['count'] > 0:
-        automate_context.attach_error_to_objects(
-            category="Uncoordinated Elements",
-            object_ids=results["empty_lists"]['keys'],
-            message="No match found.")
-        automate_context.attach_warning_to_objects(
-            category='Multi-Wall Matches - Complex',
-            object_ids=results["lists_greater_than_3"]['keys'],
-            message="Surfaces whose points are contained in more than 3 wall objects. By definition of this algorithm possibly a dangerous analytical element. Consider refining buffer size, ETABS model or checking modelling quality in Revit."
-        )
         automate_context.attach_info_to_objects(
-            category="Easy Matches",
+            category="Easy matches",
             object_ids=results["lists_with_1_item"]['keys'],
             message="Surfaces completely contained within one wall object."
         )
         automate_context.attach_info_to_objects(
-            category="Easy Matches",
+            category="Multi-wall matches (easy)",
             object_ids=results["lists_between_2_and_3"]['keys'],
             message="Surfaces whose points are contained within two to three wall objects."
         )
+        automate_context.attach_warning_to_objects(
+            category='Multi-wall matches (hard)',
+            object_ids=results["lists_greater_than_3"]['keys'],
+            message="Surfaces whose points are contained in more than 3 wall objects. By definition of this algorithm possibly a dangerous analytical element. Consider refining buffer size, ETABS model or checking modelling quality in Revit."
+        )
+        automate_context.attach_error_to_objects(
+            category="No matches",
+            object_ids=results["empty_lists"]['keys'],
+            message="No match found. The surfaces are not coordinated with the architectural model.")
         automate_context.mark_run_failed(
             "ETABS model not fully coordinated with Revit model:"
                 f'\n\tNo matches: {results['empty_lists']['count']} / {len(matches)}. '
@@ -104,20 +104,20 @@ def automate_function(
         automate_context.set_context_view()
 
     else:
-        automate_context.attach_warning_to_objects(
-            category='Multi-Wall Matches - Complex',
-            object_ids=results["lists_greater_than_3"]['keys'],
-            message="Surfaces whose points are contained in more than 3 wall objects. By definition of this algorithm possibly a dangerous analytical element. Consider refining buffer size, ETABS model or checking modelling quality in Revit."
-        )
         automate_context.attach_info_to_objects(
-            category="Easy Matches",
+            category="Easy matches",
             object_ids=results["lists_with_1_item"]['keys'],
             message="Surfaces completely contained within one wall object."
         )
         automate_context.attach_info_to_objects(
-            category="Easy Matches",
+            category="Multi-wall matches (easy)",
             object_ids=results["lists_between_2_and_3"]['keys'],
             message="Surfaces whose points are contained within two to three wall objects."
+        )
+        automate_context.attach_warning_to_objects(
+            category='Multi-wall matches (hard)',
+            object_ids=results["lists_greater_than_3"]['keys'],
+            message="Surfaces whose points are contained in more than 3 wall objects. By definition of this algorithm possibly a dangerous analytical element. Consider refining buffer size, ETABS model or checking modelling quality in Revit."
         )
         automate_context.mark_run_success(
             "ETABS model fully coordinated with Revit model."

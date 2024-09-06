@@ -11,60 +11,89 @@ class AnalyticalSurface:
         self.bounds = np.array([np.min(points, axis=0), np.max(points, axis=0)])
         self.interior_points = None
 
-    def generate_interior_points(self, num_points=10):
+    def generate_grid(self, max_distance = 0.5):
         """
-        Generate uniformly distributed interior points on a planar surface defined by four vertices.
+        Generate a grid of points on the surface based on the maximum distance between points.
 
         Args:
-            num_points (int): Number of interior points to generate.
+            max_distance (float): Maximum distance between grid points.
 
         Returns:
-            np.ndarray: Array of interior points on the surface.
+            np.ndarray: Array of grid points on the surface in 3D space.
         """
-        # Split the quadrilateral into two triangles
-        if len(self.points) != 4:
-            raise ValueError("Expecting 2D planar surfaces defined by four vertices.")
+        # Step 1: Define the local 2D coordinate system
         v0, v1, v2, v3 = self.points
-        triangle1 = [v0, v1, v2]
-        triangle2 = [v0, v2, v3]
 
-        # Generate points for each triangle
-        points1 = self._generate_points_in_triangle(triangle1, num_points // 2)
-        points2 = self._generate_points_in_triangle(triangle2, num_points // 2)
+        # Create vectors representing the sides of the surface
+        u_vec = v1 - v0  # Vector along one side
+        v_vec = v3 - v0  # Vector along the other side
 
-        # Combine points from both triangles
-        self.interior_points = np.vstack((points1, points2))
+        # Normalize the vectors
+        u_vec = u_vec / np.linalg.norm(u_vec)
+        v_vec = v_vec / np.linalg.norm(v_vec)
 
-        if self.id == 'a1509c1910abec0f97d1746f86803428':
-            export_surface_to_txt(self, 'test_print.txt')
+        # Step 2: Project vertices onto the local 2D plane (aligned to the surface)
+        # We will use (v0, u_vec, v_vec) as the base for a local coordinate system
+        def project_to_local_2d(point):
+            relative_point = point - v0
+            u_coord = np.dot(relative_point, u_vec)
+            v_coord = np.dot(relative_point, v_vec)
+            return np.array([u_coord, v_coord])
 
-    def _generate_points_in_triangle(self, vertices, num_points):
-        """
-        Generate uniformly distributed points inside a triangle.
+        # Project all 4 vertices to the local 2D system
+        v0_2d = np.array([0, 0])
+        v1_2d = project_to_local_2d(v1)
+        v2_2d = project_to_local_2d(v2)
+        v3_2d = project_to_local_2d(v3)
 
-        Args:
-            vertices (list): List of three vertices defining the triangle.
-            num_points (int): Number of points to generate.
+        # Step 3: Generate the grid in 2D space
+        # Get the bounding box in 2D space
+        min_x = min(v0_2d[0], v1_2d[0], v2_2d[0], v3_2d[0])
+        max_x = max(v0_2d[0], v1_2d[0], v2_2d[0], v3_2d[0])
+        min_y = min(v0_2d[1], v1_2d[1], v2_2d[1], v3_2d[1])
+        max_y = max(v0_2d[1], v1_2d[1], v2_2d[1], v3_2d[1])
 
-        Returns:
-            np.ndarray: Array of points inside the triangle.
-        """
-        v0, v1, v2 = vertices
-        points = []
+        # Create a grid of points within the bounding box
+        x_coords = np.arange(min_x, max_x, max_distance)
+        y_coords = np.arange(min_y, max_y, max_distance)
+        grid_2d = np.array([[x, y] for x in x_coords for y in y_coords])
 
-        for _ in range(num_points):
-            # Generate random barycentric coordinates
-            r1 = np.random.rand()
-            r2 = np.random.rand()
-            if r1 + r2 > 1:
-                r1 = 1 - r1
-                r2 = 1 - r2
+        # Step 4: Transform the grid back to 3D space
+        def transform_to_3d(point_2d):
+            return v0 + point_2d[0] * u_vec + point_2d[1] * v_vec
 
-            # Calculate the point using barycentric coordinates
-            point = v0 + r1 * (v1 - v0) + r2 * (v2 - v0)
-            points.append(point)
+        grid_3d = np.array([transform_to_3d(p) for p in grid_2d])
 
-        return np.array(points)
+        # Step 5: Filter the points that are inside the quadrilateral (in 3D space)
+        def is_point_in_surface(point):
+            # Use barycentric coordinates to check if point is inside the quadrilateral
+            # Triangulate the quadrilateral into two triangles (v0, v1, v2) and (v0, v2, v3)
+            def point_in_triangle(pt, tri):
+                v0, v1, v2 = tri
+                u = v1 - v0
+                v = v2 - v0
+                w = pt - v0
+
+                u_dot_u = np.dot(u, u)
+                u_dot_v = np.dot(u, v)
+                u_dot_w = np.dot(u, w)
+                v_dot_v = np.dot(v, v)
+                v_dot_w = np.dot(v, w)
+
+                denom = u_dot_u * v_dot_v - u_dot_v * u_dot_v
+                s_numer = u_dot_u * v_dot_w - u_dot_v * u_dot_w
+                t_numer = v_dot_v * u_dot_w - u_dot_v * v_dot_w
+
+                s = s_numer / denom
+                t = t_numer / denom
+
+                return (s >= 0) and (t >= 0) and (s + t <= 1)
+
+            # Check both triangles
+            return point_in_triangle(point, [v0, v1, v2]) or point_in_triangle(point, [v0, v2, v3])
+
+        # Filter grid points to only include those inside the surface
+        self.interior_points = np.array([p for p in grid_3d if is_point_in_surface(p)])
 
 
 class EtabsModelProcessor:
@@ -137,11 +166,3 @@ class EtabsModelProcessor:
         if self.validate_source():
             return self.extract_analytical_surfaces()
         raise ValueError("Invalid ETABS model source.")
-
-def export_surface_to_txt(surface, file_path):
-    """Export points from a surface to a text file for importing into Rhino."""
-    with open(file_path, 'w') as f:
-        f.write(f"# Surface {surface.id}\n")
-        np.savetxt(f, surface.points, delimiter=',', header="x,y,z", comments='')
-        np.savetxt(f, surface.interior_points, delimiter=',', header="x,y,z", comments='')
-        f.write("\n")

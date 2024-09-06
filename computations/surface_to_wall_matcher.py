@@ -28,7 +28,7 @@ class SurfaceWallMatcher:
         return filtered_walls
 
     @staticmethod
-    def is_surface_coordinated(surface: 'AnalyticalSurface', candidate_walls: list['RevitWall']) -> list[str]:
+    def is_surface_coordinated(surface: 'AnalyticalSurface', candidate_walls: list['RevitWall'], grid_max_distance) -> list[str]:
         """
         Checks if a surface is coordinated with any walls in the list of candidate walls.
         
@@ -42,8 +42,11 @@ class SurfaceWallMatcher:
         matching_wall_ids = []
 
         # Combine vertices and interior points for the check
-        surface.generate_interior_points()
-        all_points = np.vstack((surface.points, surface.interior_points))
+        surface.generate_grid(grid_max_distance)
+        if surface.interior_points.size == 0:
+            all_points = surface.points
+        else:
+            all_points = np.vstack((surface.points, surface.interior_points))
         remaining_points = all_points.copy()
 
         for wall in candidate_walls:
@@ -71,7 +74,7 @@ class SurfaceWallMatcher:
 
 
     @staticmethod
-    def find_matching_partners(surfaces: list['AnalyticalSurface'], walls: list['RevitWall']) -> dict:
+    def find_matching_partners(surfaces: list['AnalyticalSurface'], walls: list['RevitWall'], grid_max_distance) -> dict:
         """
         Finds and matches analytical surfaces to architectural walls.
 
@@ -89,7 +92,7 @@ class SurfaceWallMatcher:
             candidate_walls = SurfaceWallMatcher.spatial_proximity_filter(surface, walls)
 
             # Step 2: Check if the surface is coordinated with any candidate walls
-            matching_wall_ids = SurfaceWallMatcher.is_surface_coordinated(surface, candidate_walls)
+            matching_wall_ids = SurfaceWallMatcher.is_surface_coordinated(surface, candidate_walls, grid_max_distance)
 
             # Step 3: Store them in the matches dictionary
             matches[surface.id] = matching_wall_ids
